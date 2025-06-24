@@ -30,7 +30,7 @@ fn main() {
 
         loop {
             print!("\x1B[2J\x1B[1;1H");
-            println!("There are {} cards left in the deak.", game.cards_left());
+            println!("There are {} cards left in the deck.", game.cards_left());
             game.print();
             print!("Enter an input (hit, stand): ");
             stdout().flush().unwrap();
@@ -109,6 +109,7 @@ fn stand(game: &mut Game) {
         match vals {
             (false, true) => {
                 println!("THEY BUSTED EVERYWHERE!!!!");
+                game.add_bank();
             }
             (true, false) => {
                 println!("THEY GOT 21!!!!!!!!!!!!!!!");
