@@ -9,58 +9,77 @@ fn main() {
     let mut dealer = Dealer::new();
     let mut player = Player::new();
 
-    let mut game = Game::new(4, &mut dealer, &mut player);
+    let mut game = Game::new(2, &mut dealer, &mut player);
 
     game.deal();
-
     loop {
         print!("\x1B[2J\x1B[1;1H");
-        game.print();
-        print!("Enter an input (hit, stand, out): ");
-        stdout().flush().unwrap();
+        if game.cards_left() <= 14 {
+            println!("There are no cards left in the deck");
+            game.new_deck(2);
+        } else if game.get_bank() == 0 {
+            println!("The House wins!");
+            break;
+        }
+        let out = place_bets(&mut game);
 
-        let mut response = String::new();
-        stdin()
-            .read_line(&mut response)
-            .expect("Failed to read input");
+        if out {
+            println!("Goodbye!");
+            return;
+        }
 
-        match response.trim() {
-            "hit" => {
-                let (won, bust) = game.player_hit();
+        loop {
+            print!("\x1B[2J\x1B[1;1H");
+            println!("There are {} cards left in the deak.", game.cards_left());
+            game.print();
+            print!("Enter an input (hit, stand): ");
+            stdout().flush().unwrap();
 
-                if won || bust {
-                    if won {
-                        println!("WON!!!!!!");
+            let mut response = String::new();
+            stdin()
+                .read_line(&mut response)
+                .expect("Failed to read input");
+
+            match response.trim() {
+                "hit" => {
+                    let (won, bust) = game.player_hit();
+
+                    if won || bust {
+                        if won {
+                            print!("\x1B[2J\x1B[1;1H");
+                            println!("YOU GOT 21!!!!!!!");
+                            game.add_bank();
+                        }
+
+                        if bust {
+                            print!("\x1B[2J\x1B[1;1H");
+                            println!("BUSTED!!!!");
+                        }
+
+                        game.print();
+                        wait_for_input();
+                        break;
                     }
+                }
 
-                    if bust {
-                        println!("BUSTED!!!!");
-                    }
+                "stand" => {
+                    stand(&mut game);
+                    break;
+                }
 
-                    game.print();
-                    wait_for_input();
-                    restart(&mut game);
+                _ => {
+                    println!("Invalid input! Try 'hit' or 'stand'");
                 }
             }
-
-            "stand" => {
-                stand(&mut game);
-            }
-
-            "out" => {
-                println!("Goodbye");
-                break;
-            }
-
-            _ => {
-                println!("Not an input");
-            }
         }
+
+        game.reset_bank();
+        restart(&mut game);
     }
 }
 
 fn wait_for_input() {
-    println!("Press any key! to continue: ");
+    println!("Press [ENTER]! to continue: ");
     stdout().flush().unwrap();
     std::thread::sleep(std::time::Duration::from_secs(0));
 
@@ -76,10 +95,14 @@ fn wait_for_input() {
 
 fn stand(game: &mut Game) {
     game.player_stand();
-    wait_for_input();
-    game.dealer_reveal();
+    game.wait_for_seconds(1);
+    print!("\x1B[2J\x1B[1;1h");
     game.print();
-    wait_for_input();
+    game.dealer_reveal();
+    game.wait_for_seconds(1);
+    game.print();
+    print!("\x1B[2J\x1B[1;1H");
+    game.print();
 
     let result = game.dealer_checks();
     if let Ok(vals) = result {
@@ -95,8 +118,14 @@ fn stand(game: &mut Game) {
                     println!("The results were: YOU: {}, DEALER: {}", pt, dt);
                     match pt.cmp(&dt) {
                         Less => println!("YOU LOST :("),
-                        Greater => println!("YOU WON! :)"),
-                        Equal => println!("PASS!"),
+                        Greater => {
+                            println!("YOU WON! :)");
+                            game.add_bank();
+                        }
+                        Equal => {
+                            println!("PUSH!");
+                            game.revert_bank();
+                        }
                     }
                 }
                 Err(e) => {
@@ -111,7 +140,7 @@ fn stand(game: &mut Game) {
         println!("Errors Occured: {:?}", e);
     }
 
-    game.print();
+    //game.print();
     wait_for_input();
     restart(game);
 }
@@ -119,4 +148,37 @@ fn stand(game: &mut Game) {
 fn restart(game: &mut Game) {
     game.clear();
     game.deal();
+}
+
+fn place_bets(game: &mut Game) -> bool {
+    loop {
+        println!("Bank: {}", game.get_bank());
+        print!("How much are you betting OR Do you want out?: ");
+        stdout().flush().unwrap();
+
+        let mut inp = String::new();
+        stdin().read_line(&mut inp).unwrap();
+
+        if inp.trim() == "out" {
+            return true;
+        }
+
+        let amount = inp.trim().parse::<i32>();
+
+        if let Err(e) = amount {
+            println!("Errors occured: {:?}", e);
+        } else if let Ok(amount) = amount {
+            let bank = game.get_bank();
+
+            match bank.cmp(&amount) {
+                Less => println!("Can't place the bet. Not enough money!"),
+                Greater | Equal => {
+                    println!("Bets have been placed.");
+                    game.remove_bank(amount);
+                    break;
+                }
+            }
+        }
+    }
+    false
 }

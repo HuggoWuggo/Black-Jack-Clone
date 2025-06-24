@@ -23,6 +23,7 @@ pub struct Game<'a> {
     pub deck: Deck,
     dealer: &'a mut Dealer,
     player: &'a mut Player,
+    pot: i32,
 }
 
 impl<'a> Game<'a> {
@@ -31,6 +32,7 @@ impl<'a> Game<'a> {
             deck: Deck::new(num_decks),
             dealer,
             player,
+            pot: 0,
         }
     }
 
@@ -50,9 +52,6 @@ impl<'a> Game<'a> {
                 println!("Errors occured: {:?}", e);
             }
         }
-
-        println!("Dealers visible card is: {:?}", self.dealer.hand);
-        println!("Dealers invisible card is: {:?}", self.dealer.hidden);
 
         match self.player.deal(&mut self.deck.cards) {
             Ok([c1, c2]) => {
@@ -109,6 +108,8 @@ impl<'a> Game<'a> {
     }
 
     pub fn print(&mut self) {
+        println!("Bank: {}", self.get_bank());
+        println!("\n\n");
         print_cards_side_by_side(&self.dealer.hand, Some(self.dealer.hidden));
         println!("\n\n");
         print_cards_side_by_side(&self.player.hand, None);
@@ -117,6 +118,46 @@ impl<'a> Game<'a> {
     pub fn clear(&mut self) {
         self.dealer.hand.clear();
         self.player.hand.clear();
+    }
+
+    pub fn new_deck(&mut self, num_decks: u32) {
+        self.deck = Deck::new(num_decks);
+        self.shuffle();
+    }
+
+    pub fn get_bank(&mut self) -> i32 {
+        self.player.bank
+    }
+
+    pub fn add_bank(&mut self) {
+        self.player.bank += self.pot * 2;
+    }
+
+    pub fn reset_bank(&mut self) {
+        self.pot = 0;
+    }
+
+    pub fn revert_bank(&mut self) {
+        self.player.bank += self.pot;
+    }
+
+    pub fn remove_bank(&mut self, value: i32) {
+        self.player.bank -= value;
+
+        if self.player.bank < 0 {
+            self.player.bank = 0;
+        }
+
+        self.pot = value;
+    }
+
+    pub fn cards_left(&mut self) -> usize {
+        self.deck.cards.len()
+    }
+
+    pub fn wait_for_seconds(&mut self, seconds: u64) {
+        print!("\x1B[2J\x1B[1;1H");
+        wait_for_seconds(seconds);
     }
 
     pub fn totals(&mut self) -> Result<(i32, i32), Errs> {
@@ -152,6 +193,8 @@ impl<'a> Game<'a> {
             let total = calculate_total(&hand)?;
 
             if total < 17 {
+                wait_for_seconds(1);
+
                 match self.dealer.hit(&mut self.deck.cards) {
                     Ok(card) => self.dealer.hand.push(card),
                     Err(e) => return Err(e),
@@ -165,13 +208,15 @@ impl<'a> Game<'a> {
                     return Ok((false, false));
                 }
             }
+            print!("\x1B[2J\x1B[1;1H");
+            self.print();
         }
     }
 
     pub fn player_stand(&mut self) {
         match self.player.stand(&self.player.hand.clone()) {
             Ok(total) => {
-                println!("{}", total);
+                println!("Your total is {}", total);
             }
 
             Err(e) => {
@@ -428,4 +473,8 @@ fn calculate_total(hand: &Vec<Card>) -> Result<i32, Errs> {
     }
 
     Ok(total)
+}
+
+fn wait_for_seconds(seconds: u64) {
+    std::thread::sleep(std::time::Duration::from_secs(seconds));
 }
