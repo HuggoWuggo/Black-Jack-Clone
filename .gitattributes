@@ -1,1 +1,5 @@
 target/* linguist-vendored
+
+**/Makefile linguist-vendored
+
+*.d linguist-vendored
