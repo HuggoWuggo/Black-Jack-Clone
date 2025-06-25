@@ -196,6 +196,46 @@ mod tests {
                     Err(e) => println!("Errors Occurred: {:?}", e),
                 }
             }
+
+            #[test]
+            fn five_under() {
+                let hand = vec![
+                    Card {
+                        suit: Suit::Clubs,
+                        value: Value::Ace,
+                        hidden: false,
+                    },
+                    Card {
+                        suit: Suit::Diamonds,
+                        value: Value::Ace,
+                        hidden: false,
+                    },
+                    Card {
+                        suit: Suit::Spades,
+                        value: Value::Ace,
+                        hidden: false,
+                    },
+                    Card {
+                        suit: Suit::Hearts,
+                        value: Value::Ace,
+                        hidden: false,
+                    },
+                    Card {
+                        suit: Suit::Clubs,
+                        value: Value::Two,
+                        hidden: false,
+                    },
+                ];
+
+                match <Player as User>::from(hand, None, Some(30)) {
+                    Ok(mut player) => {
+                        let mut dealer = Dealer::new();
+                        let mut game = Game::new(1, &mut dealer, &mut player);
+                        assert_eq!(game.player_checks(), Ok((true, false)));
+                    }
+                    Err(e) => println!("Errors Occurred: {:?}", e),
+                }
+            }
         }
     }
 

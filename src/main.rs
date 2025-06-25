@@ -32,6 +32,14 @@ fn main() {
             print!("\x1B[2J\x1B[1;1H");
             println!("There are {} cards left in the deck.", game.cards_left());
             game.print();
+
+            if game.player_checks() == Ok((true, false)) {
+                println!("YOU GOT A BLACKJACK!");
+                game.add_bank();
+                wait_for_input();
+                break;
+            }
+
             print!("Enter an input (hit, stand): ");
             stdout().flush().unwrap();
 
@@ -153,7 +161,7 @@ fn restart(game: &mut Game) {
 
 fn place_bets(game: &mut Game) -> bool {
     loop {
-        println!("Bank: {}", game.get_bank());
+        println!("Bank: ${}", game.get_bank());
         print!("How much are you betting OR Do you want out?: ");
         stdout().flush().unwrap();
 

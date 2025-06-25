@@ -108,7 +108,7 @@ impl<'a> Game<'a> {
     }
 
     pub fn print(&mut self) {
-        println!("Bank: {}", self.get_bank());
+        println!("Bank: ${}", self.get_bank());
         println!("\n\n");
         print_cards_side_by_side(&self.dealer.hand, Some(self.dealer.hidden));
         println!("\n\n");
@@ -171,6 +171,10 @@ impl<'a> Game<'a> {
     }
 
     pub fn player_checks(&mut self) -> Result<(bool, bool), Errs> {
+        if self.player.hand.len() == 5 {
+            return Ok((true, false));
+        }
+
         match calculate_total(&self.player.hand) {
             Ok(total) => {
                 if total < 21 {
