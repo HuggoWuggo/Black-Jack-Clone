@@ -1,3 +1,5 @@
+use std::io::{stdin, stdout, Write};
+
 use Cards::*;
 
 #[derive(Debug, PartialEq)]
@@ -24,6 +26,7 @@ pub struct Game<'a> {
     dealer: &'a mut Dealer,
     player: &'a mut Player,
     pot: i32,
+    side_pot: i32,
 }
 
 impl<'a> Game<'a> {
@@ -33,6 +36,7 @@ impl<'a> Game<'a> {
             dealer,
             player,
             pot: 0,
+            side_pot: 0,
         }
     }
 
@@ -125,12 +129,55 @@ impl<'a> Game<'a> {
         self.shuffle();
     }
 
+    pub fn ask_insurance(&mut self) -> bool {
+        if self.dealer.hand[0].value == Value::Ace {
+            loop {
+                print!("Do you wnt insurance? (y/n): ");
+                stdout().flush().unwrap();
+
+                let mut inp = String::new();
+
+                stdin().read_line(&mut inp).unwrap();
+
+                match inp.trim() {
+                    "y" | "Y" => {
+                        self.side_pot = (self.pot as f32 / 2.0).floor() as i32;
+                        return true;
+                    }
+                    "n" | "N" => return false,
+
+                    _ => {
+                        println!("That is not an input!");
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn reward_insurance(&mut self) -> bool {
+        if calculate_total(&mut vec![self.dealer.hidden]) == Ok(21) {
+            self.revert_bank();
+            self.reset_bank();
+            self.side_pot = 0;
+            true
+        } else {
+            self.side_pot = 0;
+            false
+        }
+    }
+
     pub fn get_bank(&mut self) -> i32 {
         self.player.bank
     }
 
-    pub fn add_bank(&mut self) {
-        self.player.bank += self.pot * 2;
+    pub fn add_bank(&mut self, bj: bool) {
+        if bj {
+            self.player.bank += (self.pot as f32 * 2.5).floor() as i32;
+        } else {
+            self.player.bank += self.pot * 2;
+        }
     }
 
     pub fn reset_bank(&mut self) {
@@ -190,6 +237,10 @@ impl<'a> Game<'a> {
     }
 
     pub fn dealer_checks(&mut self) -> Result<(bool, bool), Errs> {
+        if self.has_blackjack() {
+            return Ok((true, true));
+        }
+
         loop {
             let mut hand = self.dealer.hand.clone();
             hand.push(self.dealer.hidden);
@@ -214,6 +265,16 @@ impl<'a> Game<'a> {
             }
             print!("\x1B[2J\x1B[1;1H");
             self.print();
+        }
+    }
+
+    pub fn has_blackjack(&mut self) -> bool {
+        let mut hand = self.dealer.hand.clone();
+        hand.push(self.dealer.hidden);
+        if calculate_total(&hand) == Ok(21) {
+            true
+        } else {
+            false
         }
     }
 

@@ -28,6 +28,9 @@ fn main() {
             return;
         }
 
+        game.print();
+        let has_insurance = game.ask_insurance();
+
         loop {
             print!("\x1B[2J\x1B[1;1H");
             println!("There are {} cards left in the deck.", game.cards_left());
@@ -35,7 +38,7 @@ fn main() {
 
             if game.player_checks() == Ok((true, false)) {
                 println!("YOU GOT A BLACKJACK!");
-                game.add_bank();
+                game.add_bank(true);
                 wait_for_input();
                 break;
             }
@@ -55,23 +58,24 @@ fn main() {
                     if won || bust {
                         if won {
                             print!("\x1B[2J\x1B[1;1H");
+                            game.print();
                             println!("YOU GOT 21!!!!!!!");
-                            game.add_bank();
+                            game.add_bank(false);
                         }
 
                         if bust {
                             print!("\x1B[2J\x1B[1;1H");
+                            game.print();
                             println!("BUSTED!!!!");
                         }
 
-                        game.print();
                         wait_for_input();
                         break;
                     }
                 }
 
                 "stand" => {
-                    stand(&mut game);
+                    stand(&mut game, has_insurance);
                     break;
                 }
 
@@ -101,7 +105,7 @@ fn wait_for_input() {
     print!("\x1B[2J\x1B[1;1H");
 }
 
-fn stand(game: &mut Game) {
+fn stand(game: &mut Game, has_insurance: bool) {
     game.player_stand();
     game.wait_for_seconds(1);
     print!("\x1B[2J\x1B[1;1h");
@@ -117,7 +121,7 @@ fn stand(game: &mut Game) {
         match vals {
             (false, true) => {
                 println!("THEY BUSTED EVERYWHERE!!!!");
-                game.add_bank();
+                game.add_bank(false);
             }
             (true, false) => {
                 println!("THEY GOT 21!!!!!!!!!!!!!!!");
@@ -129,7 +133,7 @@ fn stand(game: &mut Game) {
                         Less => println!("YOU LOST :("),
                         Greater => {
                             println!("YOU WON! :)");
-                            game.add_bank();
+                            game.add_bank(false);
                         }
                         Equal => {
                             println!("PUSH!");
@@ -142,7 +146,7 @@ fn stand(game: &mut Game) {
                 }
             },
             (true, true) => {
-                println!("HOW THE FUCK DID YOU GET HERE??!!!");
+                println!("THEY GOT A BLACKJACK!");
             }
         }
     } else if let Err(e) = result {
@@ -179,12 +183,16 @@ fn place_bets(game: &mut Game) -> bool {
         } else if let Ok(amount) = amount {
             let bank = game.get_bank();
 
-            match bank.cmp(&amount) {
-                Less => println!("Can't place the bet. Not enough money!"),
-                Greater | Equal => {
-                    println!("Bets have been placed.");
-                    game.remove_bank(amount);
-                    break;
+            if amount == 0 {
+                println!("You cannot bet $0");
+            } else {
+                match bank.cmp(&amount) {
+                    Less => println!("Can't place the bet. Not enough money!"),
+                    Greater | Equal => {
+                        println!("Bets have been placed.");
+                        game.remove_bank(amount);
+                        break;
+                    }
                 }
             }
         }
