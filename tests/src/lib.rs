@@ -91,7 +91,7 @@ mod tests {
             }
 
             #[test]
-            fn won() {
+            fn won_w_blackjack() {
                 let hand = vec![Card {
                     value: Value::Queen,
                     suit: Suit::Spades,
@@ -108,7 +108,55 @@ mod tests {
                     Ok(mut dealer) => {
                         let mut player = Player::new();
                         let mut game = Game::new(1, &mut dealer, &mut player);
-                        assert_eq!(game.dealer_checks(), Ok((true, false)));
+                        assert_eq!(game.dealer_checks(), Ok((true, true)));
+                    }
+                    Err(e) => println!("Errors Occurred: {:?}", e),
+                }
+            }
+
+            #[test]
+            fn won() {
+                let hand_d = vec![
+                    Card {
+                        value: Value::Queen,
+                        suit: Suit::Spades,
+                        hidden: false,
+                    },
+                    Card {
+                        value: Value::Ace,
+                        suit: Suit::Spades,
+                        hidden: false,
+                    },
+                ];
+
+                let hidden = Card {
+                    value: Value::Queen,
+                    suit: Suit::Hearts,
+                    hidden: true,
+                };
+
+                let hand_p = vec![
+                    Card {
+                        value: Value::Two,
+                        suit: Suit::Spades,
+                        hidden: false,
+                    },
+                    Card {
+                        value: Value::Two,
+                        suit: Suit::Hearts,
+                        hidden: false,
+                    },
+                ];
+
+                match <Dealer as User>::from(hand_d.clone(), Some(hidden), None) {
+                    Ok(mut dealer) => {
+                        match <Player as User>::from(hand_p.clone(), None, Some(1000)) {
+                            Ok(mut player) => {
+                                let mut game = Game::new(1, &mut dealer, &mut player);
+                                assert_eq!(game.dealer_checks(), Ok((true, false)));
+                            }
+                            Err(e) => println!("Errors Occurred: {:?}", e),
+                        }
                     }
                     Err(e) => println!("Errors Occurred: {:?}", e),
                 }

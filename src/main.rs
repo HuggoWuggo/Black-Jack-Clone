@@ -32,6 +32,20 @@ fn main() {
         let has_insurance = game.ask_insurance();
 
         loop {
+            if has_insurance {
+                if game.has_blackjack() {
+                    game.revert_bank(true);
+                    game.dealer_reveal();
+                    game.print();
+                    println!("The dealer had a blackjack!");
+                    wait_for_input();
+                    break;
+                } else {
+                    println!("The dealer didn't have a blackjack :(");
+                    wait_for_input();
+                }
+            }
+
             print!("\x1B[2J\x1B[1;1H");
             println!("There are {} cards left in the deck.", game.cards_left());
             game.print();
@@ -75,7 +89,7 @@ fn main() {
                 }
 
                 "stand" => {
-                    stand(&mut game, has_insurance);
+                    stand(&mut game);
                     break;
                 }
 
@@ -105,7 +119,7 @@ fn wait_for_input() {
     print!("\x1B[2J\x1B[1;1H");
 }
 
-fn stand(game: &mut Game, has_insurance: bool) {
+fn stand(game: &mut Game) {
     game.player_stand();
     game.wait_for_seconds(1);
     print!("\x1B[2J\x1B[1;1h");
@@ -137,7 +151,7 @@ fn stand(game: &mut Game, has_insurance: bool) {
                         }
                         Equal => {
                             println!("PUSH!");
-                            game.revert_bank();
+                            game.revert_bank(false);
                         }
                     }
                 }

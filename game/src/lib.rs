@@ -142,6 +142,7 @@ impl<'a> Game<'a> {
                 match inp.trim() {
                     "y" | "Y" => {
                         self.side_pot = (self.pot as f32 / 2.0).floor() as i32;
+                        self.remove_insurance();
                         return true;
                     }
                     "n" | "N" => return false,
@@ -154,18 +155,6 @@ impl<'a> Game<'a> {
         }
 
         false
-    }
-
-    pub fn reward_insurance(&mut self) -> bool {
-        if calculate_total(&mut vec![self.dealer.hidden]) == Ok(21) {
-            self.revert_bank();
-            self.reset_bank();
-            self.side_pot = 0;
-            true
-        } else {
-            self.side_pot = 0;
-            false
-        }
     }
 
     pub fn get_bank(&mut self) -> i32 {
@@ -182,10 +171,15 @@ impl<'a> Game<'a> {
 
     pub fn reset_bank(&mut self) {
         self.pot = 0;
+        self.side_pot = 0;
     }
 
-    pub fn revert_bank(&mut self) {
-        self.player.bank += self.pot;
+    pub fn revert_bank(&mut self, i: bool) {
+        if !i {
+            self.player.bank += self.pot;
+        } else {
+            self.player.bank += self.pot + self.side_pot;
+        }
     }
 
     pub fn remove_bank(&mut self, value: i32) {
@@ -196,6 +190,10 @@ impl<'a> Game<'a> {
         }
 
         self.pot = value;
+    }
+
+    pub fn remove_insurance(&mut self) {
+        self.player.bank -= self.side_pot;
     }
 
     pub fn cards_left(&mut self) -> usize {
@@ -256,10 +254,13 @@ impl<'a> Game<'a> {
                 }
             } else {
                 if total > 21 {
+                    // Busted
                     return Ok((false, true));
                 } else if total == 21 {
+                    // Got 21 (NOT A BLACKJACK)!!!
                     return Ok((true, false));
                 } else {
+                    // Resume Play
                     return Ok((false, false));
                 }
             }
@@ -271,7 +272,7 @@ impl<'a> Game<'a> {
     pub fn has_blackjack(&mut self) -> bool {
         let mut hand = self.dealer.hand.clone();
         hand.push(self.dealer.hidden);
-        if calculate_total(&hand) == Ok(21) {
+        if calculate_total(&hand) == Ok(21) && hand.len() == 2 {
             true
         } else {
             false
@@ -342,7 +343,15 @@ impl User for Dealer {
         let mut hand = Vec::with_capacity(2);
 
         for i in 0..2 {
-            let card = deck.pop().expect("Failed to pop card of the deck");
+            let mut card = deck.pop().expect("Failed to pop card of the deck");
+
+            if i == 0 {
+                card = Card {
+                    value: Value::Ace,
+                    suit: Suit::Clubs,
+                    hidden: false,
+                }
+            }
 
             let new_card = Card {
                 value: card.value,
