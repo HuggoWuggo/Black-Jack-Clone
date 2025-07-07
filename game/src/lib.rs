@@ -343,15 +343,7 @@ impl User for Dealer {
         let mut hand = Vec::with_capacity(2);
 
         for i in 0..2 {
-            let mut card = deck.pop().expect("Failed to pop card of the deck");
-
-            if i == 0 {
-                card = Card {
-                    value: Value::Ace,
-                    suit: Suit::Clubs,
-                    hidden: false,
-                }
-            }
+            let card = deck.pop().expect("Failed to pop card of the deck");
 
             let new_card = Card {
                 value: card.value,
